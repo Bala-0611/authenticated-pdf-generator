@@ -4,5 +4,24 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "pdfkit": "^0.17.1"
-  }
+  },
+  "name": "authenticated-pdf-generator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bala-0611/authenticated-pdf-generator.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Bala-0611/authenticated-pdf-generator/issues"
+  },
+  "homepage": "https://github.com/Bala-0611/authenticated-pdf-generator#readme"
 }
