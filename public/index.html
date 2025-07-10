@@ -2,196 +2,183 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Authenticated PDF Generator</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      background-color: #111827;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 50px;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #141e30, #243b55);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
     }
+
     .container {
-      max-width: 400px;
-      margin: auto;
-      background: #1f2937;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(8px);
       padding: 30px;
-      border-radius: 10px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 420px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+      color: #00e5ff;
+    }
+
     input, textarea, button {
       width: 100%;
-      padding: 12px;
+      padding: 12px 14px;
       margin: 10px 0;
-      font-size: 16px;
       border: none;
-      border-radius: 5px;
+      border-radius: 10px;
+      font-size: 15px;
     }
+
     input, textarea {
-      background: #e5e7eb;
-      color: black;
+      background-color: #1e1e1e;
+      color: #fff;
+      resize: none;
     }
+
     button {
-      background: #00d4ff;
-      color: black;
+      background-color: #00bcd4;
+      color: white;
       font-weight: bold;
-      cursor: pointer;
+      transition: background 0.3s;
     }
-    .hidden {
-      display: none;
+
+    button:hover {
+      background-color: #008c9e;
     }
-    ul {
-      text-align: left;
-      padding-left: 20px;
+
+    #logout-btn {
+      background-color: #e53935;
+    }
+
+    #logout-btn:hover {
+      background-color: #b71c1c;
+    }
+
+    #dashboard {
+      margin-top: 20px;
+      background: #111;
+      padding: 12px;
+      border-radius: 10px;
+    }
+
+    .error {
+      color: #ff1744;
       font-size: 14px;
+      margin-top: 5px;
+    }
+
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 20px;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h1>🔐 PDF Generator with Auth</h1>
 
-  <h1>📝 Authenticated PDF Generator</h1>
-
-  <!-- Login Section -->
-  <div class="container" id="login-container">
-    <h2>Login</h2>
-    <input type="text" id="username" placeholder="Username" />
-    <input type="password" id="password" placeholder="Password" />
-    <button id="login-btn">Login</button>
-  </div>
-
-  <!-- PDF Section -->
-  <div class="container hidden" id="pdf-container">
-    <h2>Generate PDF</h2>
-    <form id="pdf-form">
-      <textarea id="content" rows="5" placeholder="Enter PDF content"></textarea>
-      <button type="submit">Generate PDF</button>
-    </form>
-
-    <!-- Logout Button -->
-    <button onclick="logout()" style="background:#ff4d4d;">Logout</button>
-
-    <!-- Download History -->
-    <div id="history-box">
-      <h4>📄 Last 5 Generated PDFs:</h4>
-      <ul id="history-list"></ul>
+    <!-- Login Form -->
+    <div id="login-section">
+      <input type="text" id="username" placeholder="Username" />
+      <input type="password" id="password" placeholder="Password" />
+      <button onclick="login()">Login</button>
+      <p id="login-error" class="error"></p>
     </div>
 
-    <!-- Admin Stats -->
-    <div id="stats" style="margin-top: 20px;"></div>
+    <!-- App Section -->
+    <div id="app-section" style="display: none;">
+      <button id="logout-btn" onclick="logout()">Logout</button>
+      <textarea id="pdfContent" rows="6" placeholder="✍️ Type your PDF content here..."></textarea>
+      <button onclick="generatePDF()">📄 Generate PDF</button>
+      <button onclick="loadDashboard()">📊 Admin Dashboard</button>
+      <div id="dashboard"></div>
+    </div>
   </div>
 
   <script>
-    // Login Logic
-    document.getElementById('login-btn').addEventListener('click', async () => {
+    let token = '';
+
+    function login() {
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
 
-      try {
-        const res = await fetch('http://localhost:3000/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          localStorage.setItem('token', data.token);
-          alert('✅ Login successful');
-          document.getElementById('login-container').classList.add('hidden');
-          document.getElementById('pdf-container').classList.remove('hidden');
-          renderHistory();
-          loadStats();
+      fetch('https://authenticated-pdf-generator.onrender.com/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.token) {
+          token = data.token;
+          document.getElementById('login-section').style.display = 'none';
+          document.getElementById('app-section').style.display = 'block';
+          document.getElementById('login-error').innerText = '';
         } else {
-          alert(data.message || 'Login failed');
+          document.getElementById('login-error').innerText = data.message || 'Login failed';
         }
-      } catch (err) {
-        alert('Login error: ' + err.message);
-      }
-    });
-
-    // Generate PDF
-    document.getElementById('pdf-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const content = document.getElementById('content').value;
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        alert('Please login first');
-        return;
-      }
-
-      try {
-        const res = await fetch('http://localhost:3000/generate-pdf', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          },
-          body: JSON.stringify({ content })
-        });
-
-        if (res.ok) {
-          // Save history
-          let history = JSON.parse(localStorage.getItem('history') || '[]');
-          history.unshift(content);
-          history = history.slice(0, 5);
-          localStorage.setItem('history', JSON.stringify(history));
-          renderHistory();
-          loadStats();
-
-          // Download PDF
-          const blob = await res.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'generated.pdf';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          window.URL.revokeObjectURL(url);
-        } else {
-          const err = await res.json();
-          alert(err.message || 'PDF generation failed');
-        }
-      } catch (err) {
-        alert('Error: ' + err.message);
-      }
-    });
-
-    // Logout
-    function logout() {
-      localStorage.removeItem('token');
-      document.getElementById('pdf-container').classList.add('hidden');
-      document.getElementById('login-container').classList.remove('hidden');
-      alert('👋 Logged out');
-    }
-
-    // Render history
-    function renderHistory() {
-      const history = JSON.parse(localStorage.getItem('history') || '[]');
-      const list = document.getElementById('history-list');
-      list.innerHTML = '';
-      history.forEach((item, index) => {
-        const li = document.createElement('li');
-        li.textContent = `#${index + 1}: ${item.slice(0, 50)}...`;
-        list.appendChild(li);
       });
     }
 
-    // Load admin stats
-    async function loadStats() {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3000/admin-dashboard', {
+    function generatePDF() {
+      const content = document.getElementById('pdfContent').value;
+
+      fetch('https://authenticated-pdf-generator.onrender.com/generate-pdf', {
+        method: 'POST',
         headers: {
-          'Authorization': 'Bearer ' + token
-        }
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ content })
+      })
+      .then(res => res.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'generated.pdf';
+        a.click();
       });
-      const data = await res.json();
-      document.getElementById('stats').innerHTML = `
-        <h4>📊 Admin Stats:</h4>
-        <p>Total PDFs Generated: ${data.totalPDFs}</p>
-        <p>Unique Users: ${data.totalUsers}</p>
-      `;
+    }
+
+    function loadDashboard() {
+      fetch('https://authenticated-pdf-generator.onrender.com/admin-dashboard', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('dashboard').innerHTML = `
+          <p>📄 Total PDFs Generated: <b>${data.totalPDFs}</b></p>
+          <p>👤 Total Users: <b>${data.totalUsers}</b></p>
+        `;
+      });
+    }
+
+    function logout() {
+      token = '';
+      document.getElementById('app-section').style.display = 'none';
+      document.getElementById('login-section').style.display = 'block';
+      document.getElementById('pdfContent').value = '';
+      document.getElementById('dashboard').innerHTML = '';
     }
   </script>
 </body>

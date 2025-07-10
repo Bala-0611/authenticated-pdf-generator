@@ -3,19 +3,26 @@ import bodyParser from 'body-parser';
 import jwt from 'jsonwebtoken';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const SECRET_KEY = 'bala-super-secret-key';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Middleware
 app.use(cors());
 app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// 🧠 In-memory Stats
+// In-memory Stats
 let pdfCount = 0;
 const users = new Set();
 
-// ✅ LOGIN ROUTE
+// Login Route
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
 
@@ -27,7 +34,7 @@ app.post('/login', (req, res) => {
   return res.status(401).json({ message: 'Invalid credentials' });
 });
 
-// 🔐 JWT AUTH MIDDLEWARE
+// Auth Middleware
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -41,7 +48,7 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// 📄 GENERATE PDF ROUTE
+// Generate PDF
 app.post('/generate-pdf', authenticateToken, async (req, res) => {
   const { content } = req.body;
 
@@ -50,12 +57,11 @@ app.post('/generate-pdf', authenticateToken, async (req, res) => {
   }
 
   try {
-    // Increment stats
     pdfCount++;
     users.add(req.user.user);
 
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([595, 842]); // A4 size
+    const page = pdfDoc.addPage([595, 842]); // A4
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontSize = 12;
     let y = 800;
@@ -74,7 +80,6 @@ app.post('/generate-pdf', authenticateToken, async (req, res) => {
     });
 
     const pdfBytes = await pdfDoc.save();
-
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename=generated.pdf');
     res.send(Buffer.from(pdfBytes));
@@ -84,7 +89,7 @@ app.post('/generate-pdf', authenticateToken, async (req, res) => {
   }
 });
 
-// 📊 ADMIN DASHBOARD ROUTE
+// Admin Stats
 app.get('/admin-dashboard', authenticateToken, (req, res) => {
   res.json({
     totalPDFs: pdfCount,
@@ -92,7 +97,7 @@ app.get('/admin-dashboard', authenticateToken, (req, res) => {
   });
 });
 
-// ✅ START SERVER
+// Start
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
